@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+
+  chatbot-service:
+    build: ./chatbot-service
+    container_name: chatbot-service
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/
+    depends_on:
+      - mongodb
+    ports:
+      - "8001:8001"
+
+  search-service:
+    build: ./search-service
+    container_name: search-service
+    ports:
+      - "8002:8002"
+
+  recommendation-service:
+    build: ./recommendation-service
+    container_name: recommendation-service
+    ports:
+      - "8003:8003"
+
+  order-inventory-service:
+    build: ./order-inventory-service
+    container_name: order-inventory-service
+    ports:
+      - "8004:8004"
+
+  review-service:
+    build: ./review-service
+    container_name: review-service
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/
+    depends_on:
+      - mongodb
+    ports:
+      - "8005:8005"
+
+  frontend-gateway:
+    build: ./frontend-gateway
+    container_name: frontend-gateway
+    environment:
+      # These overwrite the localhost defaults in app.py to use Docker networking
+      - CHATBOT_URL=http://chatbot-service:8001
+      - SEARCH_URL=http://search-service:8002
+      - RECOMMEND_URL=http://recommendation-service:8003
+      - ORDER_SQL_URL=http://order-inventory-service:8004
+      - REVIEW_MONGO_URL=http://review-service:8005
+    ports:
+      # Maps VM's public port 80 to container's port 5000
+      - "80:5000"
+    depends_on:
+      - chatbot-service
+      - search-service
+      - recommendation-service
+      - order-inventory-service
+      - review-service
