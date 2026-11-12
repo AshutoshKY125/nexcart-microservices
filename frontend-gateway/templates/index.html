@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NexCart Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans">
+
+    <!-- Top Navigation -->
+    <nav class="bg-indigo-900 text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-2">
+                <span class="text-2xl font-extrabold tracking-tight text-amber-400">NexCart</span>
+            </div>
+
+            <div class="flex-1 max-w-xl mx-4">
+                <div class="relative flex">
+                    <input id="searchInput" type="text" placeholder="Search products, brands, or categories..."
+                        class="w-full px-4 py-2 rounded-l-lg text-slate-900 focus:outline-none"
+                        onkeyup="if(event.key === 'Enter') triggerSearch()">
+                    <button onclick="triggerSearch()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-5 py-2 rounded-r-lg">
+                        Search
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-4 text-sm">
+                <button onclick="toggleCart()" id="cartBadge" class="bg-indigo-800 hover:bg-indigo-700 px-4 py-2 rounded-lg border border-indigo-600 font-bold transition">
+                    🛒 Cart (0)
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <h2 id="catalogTitle" class="text-2xl font-bold mb-6">Featured Catalog</h2>
+
+        <!-- Product Grid -->
+        <div id="productGrid" class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {% for p in products %}
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-between hover:shadow-md transition">
+                <div>
+                    <div class="flex justify-between items-start">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-1 rounded">{{ p.category }}</span>
+                        <span class="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-1 rounded">Stock: {{ p.stock }}</span>
+                    </div>
+                    <h3 class="text-lg font-bold mt-3 text-slate-900 leading-tight">{{ p.name }}</h3>
+                    <p class="text-sm text-amber-500 font-semibold mt-1">★ {{ p.rating }}</p>
+                    <p class="text-xl font-extrabold text-slate-900 mt-2">₹{{ p.price }}</p>
+                </div>
+                <div class="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-2">
+                    <button onclick="addToCart({{ p.id }}, '{{ p.name }}', {{ p.price }})" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg text-sm">
+                        Add to Cart
+                    </button>
+                    <button onclick="loadRecommendations({{ p.id }}, '{{ p.name }}')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 rounded-lg text-xs">
+                        Similar Items
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Recommendation Drawer -->
+        <div id="recSection" class="hidden mt-12 bg-indigo-50 border border-indigo-200 rounded-xl p-6">
+            <h3 id="recTitle" class="text-lg font-bold text-indigo-950 mb-4">Recommended For You</h3>
+            <div id="recGrid" class="grid grid-cols-1 md:grid-cols-4 gap-4"></div>
+        </div>
+    </main>
+
+    <!-- Cart Modal -->
+    <div id="cartModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex justify-center items-center backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-2xl w-96 max-h-[80vh] overflow-y-auto shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Your Cart</h2>
+                <button onclick="toggleCart()" class="text-slate-400 hover:text-red-500 text-xl font-bold">&times;</button>
+            </div>
+            <div id="cartItems" class="space-y-3 mb-4 text-sm">
+                <p class="text-slate-500 text-center italic">Your cart is empty.</p>
+            </div>
+            <div class="border-t pt-4 font-bold text-lg flex justify-between">
+                <span>Total:</span>
+                <span id="cartTotal">₹0</span>
+            </div>
+            <button onclick="checkout()" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl">
+                Proceed to Checkout
+            </button>
+        </div>
+    </div>
+
+    <!-- Floating Support Chatbot -->
+    <div id="chatbotContainer" class="fixed bottom-5 right-5 z-50 flex flex-col items-end">
+        
+        <!-- Chatbot Window (Hidden by default) -->
+        <div id="chatWindow" class="hidden w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden mb-4">
+            <div class="bg-indigo-900 text-white px-4 py-3 flex justify-between items-center">
+                <h4 class="font-bold text-sm">Customer Support</h4>
+                <button onclick="toggleChat()" class="text-slate-300 hover:text-white text-xl font-bold leading-none">&times;</button>
+            </div>
+            <div id="chatMessages" class="h-64 p-3 overflow-y-auto text-xs space-y-2 bg-slate-50">
+                <div class="bg-indigo-100 text-indigo-950 p-2.5 rounded-lg">
+                    Hello! Need help finding something, logging an issue, or giving feedback?
+                </div>
+            </div>
+            <div class="p-2 border-t border-slate-200 flex gap-1 bg-white">
+                <input id="chatInput" type="text" placeholder="Type a message..."
+                    class="flex-1 text-xs px-2.5 py-2 border rounded-lg focus:outline-none"
+                    onkeyup="if(event.key === 'Enter') sendChat()">
+                <button onclick="sendChat()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-2 rounded-lg font-semibold">Send</button>
+            </div>
+        </div>
+
+        <!-- Circular Chat Bubble Toggle -->
+        <button onclick="toggleChat()" id="chatBubble" class="w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-xl flex items-center justify-center text-2xl transition transform hover:scale-110">
+            💬
+        </button>
+
+    </div>
+
+    <script>
+        let cart = [];
+        function toggleChat() {
+            const chatWindow = document.getElementById('chatWindow');
+            chatWindow.classList.toggle('hidden');
+        }
+
+        function toggleCart() {
+            const modal = document.getElementById('cartModal');
+            modal.classList.toggle('hidden');
+        }
+
+        async function addToCart(id, name, price) {
+            // Add to UI Cart
+            cart.push({ id, name, price });
+            document.getElementById('cartBadge').innerText = `🛒 Cart (${cart.length})`;
+            updateCartUI();
+
+            // Reserve in SQL DB silently
+            try {
+                const res = await fetch(`/api/buy`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({product_id: id, quantity: 1})
+                });
+                if (!res.ok) {
+                    alert("Sorry, this item is out of stock!");
+                    cart.pop(); // Remove from UI if DB fails
+                    updateCartUI();
+                }
+            } catch (err) {
+                console.log("Database offline, UI cart updated.");
+            }
+        }
+
+        function updateCartUI() {
+            const cartDiv = document.getElementById('cartItems');
+            let total = 0;
+            if (cart.length === 0) {
+                cartDiv.innerHTML = '<p class="text-slate-500 text-center italic">Your cart is empty.</p>';
+            } else {
+                cartDiv.innerHTML = cart.map((item, index) => {
+                    total += item.price;
+                    return `
+                    <div class="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100">
+                        <span class="truncate w-48 font-medium">${item.name}</span>
+                        <span class="font-bold text-indigo-700">₹${item.price}</span>
+                    </div>`;
+                }).join('');
+            }
+            document.getElementById('cartTotal').innerText = `₹${total}`;
+        }
+
+        function checkout() {
+            if(cart.length === 0) return alert("Cart is empty!");
+            alert("Order Confirmed! Your items will be shipped shortly.");
+            cart = [];
+            updateCartUI();
+            document.getElementById('cartBadge').innerText = `🛒 Cart (0)`;
+            toggleCart();
+        }
+
+        async function triggerSearch() {
+            const q = document.getElementById('searchInput').value;
+            const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+            const data = await res.json();
+            document.getElementById('catalogTitle').innerText = q ? `Search Results for "${q}"` : "Featured Catalog";
+            
+            const grid = document.getElementById('productGrid');
+            grid.innerHTML = data.results.map(p => `
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-between hover:shadow-md transition">
+                    <div>
+                        <span class="text-xs font-semibold uppercase text-indigo-600 bg-indigo-50 px-2 py-1 rounded">${p.category}</span>
+                        <h3 class="text-lg font-bold mt-3 leading-tight">${p.name}</h3>
+                        <p class="text-xl font-extrabold mt-2 text-slate-900">₹${p.price}</p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-2">
+                        <button onclick="addToCart(${p.id}, '${p.name.replace(/'/g, "\\'")}', ${p.price})" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg text-sm">
+                            Add to Cart
+                        </button>
+                        <button onclick="loadRecommendations(${p.id}, '${p.name.replace(/'/g, "\\'")}')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 rounded-lg text-xs">
+                            Similar Items
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadRecommendations(id, name) {
+            const res = await fetch(`/api/recommend/${id}`);
+            const data = await res.json();
+            document.getElementById('recSection').classList.remove('hidden');
+            document.getElementById('recTitle').innerText = `Because you viewed "${name}"`;
+            
+            document.getElementById('recGrid').innerHTML = data.recommendations.map(r => `
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-indigo-100 flex flex-col justify-between">
+                    <div>
+                        <span class="text-[10px] uppercase text-indigo-600 font-bold bg-indigo-50 px-2 py-1 rounded">${r.category}</span>
+                        <h4 class="font-bold text-sm mt-2 leading-tight">${r.name}</h4>
+                        <p class="text-indigo-900 font-extrabold mt-1">₹${r.price}</p>
+                    </div>
+                    <button onclick="addToCart(${r.id}, '${r.name.replace(/'/g, "\\'")}', ${r.price})" class="mt-3 w-full bg-amber-500 hover:bg-amber-600 text-white font-medium py-1.5 rounded-lg text-xs">
+                        Add to Cart
+                    </button>
+                </div>
+            `).join('');
+            
+            // Scroll down to recommendations smoothly
+            document.getElementById('recSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function sendChat() {
+            const input = document.getElementById('chatInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+            const box = document.getElementById('chatMessages');
+            box.innerHTML += `<div class="bg-slate-200 text-slate-900 p-2 rounded-lg self-end text-right ml-6">${msg}</div>`;
+            input.value = '';
+            
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: msg, user_id: "guest_user"})
+            });
+            const data = await res.json();
+            // Removed the [intent] tag from UI
+            box.innerHTML += `<div class="bg-indigo-100 text-indigo-950 p-2 rounded-lg mr-4">${data.reply}</div>`;
+            box.scrollTop = box.scrollHeight;
+        }
+    </script>
+</body>
+</html>
